@@ -14,7 +14,8 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-26
+    # Preview image; macos-26 only ships Xcode 26, which can't compile Icon.icon.
+    runs-on: xcode-27
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
       DMG: build/DeadlineProgressBars.dmg
@@ -47,7 +48,7 @@ jobs:
       # Icon.icon is authored in Xcode 27's Icon Composer; older actool versions crash on it.
       - uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest
+          xcode-version: latest-stable
 
       - name: Require Xcode 27 or newer
         run: |
