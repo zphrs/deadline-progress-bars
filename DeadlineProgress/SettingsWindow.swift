@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 
 final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, NSWindowDelegate, NSTabViewDelegate {
     private let tokenField = NSSecureTextField()
@@ -6,9 +7,14 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     private let pageField = NSTextField()
     private let formatField = NSTextField()
     private let stackCheckbox = NSButton(checkboxWithTitle: "Stack both bars in one menu-bar item", target: nil, action: nil)
+    private let loginCheckbox = NSButton(checkboxWithTitle: "Open at login", target: nil, action: nil)
+    private let showDeadlineCheckbox = NSButton(checkboxWithTitle: "Show the Due (deadline) bar", target: nil, action: nil)
+    private let showDailyCheckbox = NSButton(checkboxWithTitle: "Show the Day (workday) bar", target: nil, action: nil)
+    private let hiddenHint = NSTextField(labelWithString: "Both bars hidden: open the app again to return here.")
     private let labelsCheckbox = NSButton(checkboxWithTitle: "Show Due/Day labels beside the bars", target: nil, action: nil)
     private let dailyTopCheckbox = NSButton(checkboxWithTitle: "When stacked, show the daily bar on top", target: nil, action: nil)
     /// Called after every change; `dataChanged` is true when the token, database or page changed.
+    private var hintRow: NSGridRow?
     private let onChange: (_ dataChanged: Bool) -> Void
     private var debounce: Timer?
     private var colorsDebounce: Timer?
@@ -43,14 +49,19 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         pageField.placeholderString = "https://app.notion.com/p/…"
         formatField.placeholderString = BarRenderer.defaultFormat
         for field in [tokenField, dataSourceField, pageField, formatField] { field.delegate = self }
-        for box in [stackCheckbox, labelsCheckbox, dailyTopCheckbox] {
+        for box in [showDeadlineCheckbox, showDailyCheckbox, stackCheckbox, labelsCheckbox, dailyTopCheckbox] {
             box.target = self
             box.action = #selector(applyNow)
         }
+        loginCheckbox.target = self
+        loginCheckbox.action = #selector(toggleLogin)
 
         let hint = NSTextField(labelWithString: "{time} = time left, {percent} = progress")
         hint.font = .systemFont(ofSize: 11)
         hint.textColor = .secondaryLabelColor
+
+        hiddenHint.font = .systemFont(ofSize: 11)
+        hiddenHint.textColor = .secondaryLabelColor
 
         let grid = NSGridView(views: [
             [NSTextField(labelWithString: "Notion token:"), tokenField],
@@ -58,6 +69,10 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
             [NSTextField(labelWithString: "Time left in workday URL:"), pageField],
             [NSTextField(labelWithString: "Label format:"), formatField],
             [NSView(), hint],
+            [NSView(), loginCheckbox],
+            [NSView(), showDeadlineCheckbox],
+            [NSView(), showDailyCheckbox],
+            [NSView(), hiddenHint],
             [NSView(), labelsCheckbox],
             [NSView(), stackCheckbox],
             [NSView(), dailyTopCheckbox],
@@ -65,6 +80,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         grid.column(at: 0).xPlacement = .trailing
         grid.column(at: 1).width = 280
         grid.rowSpacing = 10
+        hintRow = grid.cell(for: hiddenHint)?.row
         addTab("General", content: grid, stack: generalStack)
 
         setUpColorsTab()
@@ -429,6 +445,10 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         labelsCheckbox.state = Settings.showLabels ? .on : .off
         dailyTopCheckbox.state = Settings.dailyOnTop ? .on : .off
         stackCheckbox.state = Settings.stackBars ? .on : .off
+        showDeadlineCheckbox.state = Settings.showDeadline ? .on : .off
+        showDailyCheckbox.state = Settings.showDaily ? .on : .off
+        loginCheckbox.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        updateEnabledStates()
         editing = editingDaily ? Settings.dailyColors : Settings.deadlineColors
         rebuildRows()
         NSApp.activate(ignoringOtherApps: true)
@@ -456,6 +476,32 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
 
     @objc private func applyNow() { apply() }
 
+    /// The system owns the login item, so read its state back rather than trusting the checkbox.
+    @objc private func toggleLogin() {
+        do {
+            if loginCheckbox.state == .on { try SMAppService.mainApp.register() }
+            else { try SMAppService.mainApp.unregister() }
+        } catch {
+            NSSound.beep()
+        }
+        let status = SMAppService.mainApp.status
+        loginCheckbox.state = status == .enabled ? .on : .off
+        // Disabled by the user in System Settings › Login Items; only they can turn it back on there.
+        if status == .requiresApproval { SMAppService.openSystemSettingsLoginItems() }
+    }
+
+    /// Stacking needs both bars; with neither shown, the only way back to Settings is reopening the app.
+    private func updateEnabledStates() {
+        let both = showDeadlineCheckbox.state == .on && showDailyCheckbox.state == .on
+        let neither = showDeadlineCheckbox.state == .off && showDailyCheckbox.state == .off
+        stackCheckbox.isEnabled = both
+        dailyTopCheckbox.isEnabled = both
+        if hintRow?.isHidden != !neither {
+            hintRow?.isHidden = !neither
+            resizeToFit()
+        }
+    }
+
     private func apply() {
         debounce?.invalidate()
         let before = [Settings.token ?? "", Settings.dataSourceID, Settings.dailyPageID]
@@ -466,6 +512,9 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         Settings.showLabels = labelsCheckbox.state == .on
         Settings.dailyOnTop = dailyTopCheckbox.state == .on
         Settings.stackBars = stackCheckbox.state == .on
+        Settings.showDeadline = showDeadlineCheckbox.state == .on
+        Settings.showDaily = showDailyCheckbox.state == .on
+        updateEnabledStates()
         onChange(before != [Settings.token ?? "", Settings.dataSourceID, Settings.dailyPageID])
     }
 }

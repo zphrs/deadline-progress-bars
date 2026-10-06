@@ -157,6 +157,18 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "showLabels") }
     }
 
+    /// Defaults to on when never set.
+    static var showDeadline: Bool {
+        get { UserDefaults.standard.object(forKey: "showDeadline") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "showDeadline") }
+    }
+
+    /// Defaults to on when never set.
+    static var showDaily: Bool {
+        get { UserDefaults.standard.object(forKey: "showDaily") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "showDaily") }
+    }
+
     static var dailyOnTop: Bool {
         get { UserDefaults.standard.bool(forKey: "dailyOnTop") }
         set { UserDefaults.standard.set(newValue, forKey: "dailyOnTop") }

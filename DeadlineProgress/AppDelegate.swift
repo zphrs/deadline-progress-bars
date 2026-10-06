@@ -28,6 +28,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self, selector: #selector(refresh), name: NSWorkspace.didWakeNotification, object: nil)
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.refresh() }
         refresh()
+        if !Settings.showDeadline && !Settings.showDaily { openSettings() }
+    }
+
+    /// With both bars hidden there is no menu to reach Settings from, so opening the app again shows it.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !Settings.showDeadline && !Settings.showDaily { openSettings() }
+        return false
     }
 
     // MARK: Data
@@ -65,14 +72,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: Rendering
 
     private func render() {
+        deadlineItem.isVisible = Settings.showDeadline
+        dailyItem.isVisible = Settings.showDaily
         guard Settings.token != nil else {
             setPlain(deadlineItem, "⏳ set token")
             setPlain(dailyItem, "⏳ set token")
-            dailyItem.isVisible = true
             return
         }
         let warn = "⚠︎"
-        if Settings.stackBars, let a = selectedDeadline, let b = daily {
+        if Settings.stackBars, Settings.showDeadline, Settings.showDaily, let a = selectedDeadline, let b = daily {
             let deadlineBar = (deadlineFailed ? "⚠︎" : "") + BarRenderer.label(timeLeft: a.timeLeft, percent: a.percent)
             let dailyBar = (dailyFailed ? "⚠︎" : "") + BarRenderer.label(timeLeft: b.timeLeft, percent: b.percent)
             let dl = BarRow(text: deadlineBar, percent: a.percent, colors: Settings.deadlineColors, prefix: deadlinePrefix)
@@ -81,7 +89,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             dailyItem.isVisible = false
             return
         }
-        dailyItem.isVisible = true
         if let d = selectedDeadline {
             var text = BarRenderer.label(timeLeft: d.timeLeft, percent: d.percent)
             if deadlineFailed { text = warn + text }
