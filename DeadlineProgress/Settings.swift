@@ -162,12 +162,6 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "dailyOnTop") }
     }
 
-    /// Experimental Liquid Glass rendering.
-    static var useGlass: Bool {
-        get { UserDefaults.standard.bool(forKey: "useGlass") }
-        set { UserDefaults.standard.set(newValue, forKey: "useGlass") }
-    }
-
     static var stackBars: Bool {
         get { UserDefaults.standard.bool(forKey: "stackBars") }
         set { UserDefaults.standard.set(newValue, forKey: "stackBars") }

@@ -109,32 +109,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var glassViews: [ObjectIdentifier: GlassBarsView] = [:]
 
     private func showBars(_ item: NSStatusItem, rows: [BarRow]) {
-        item.button?.title = ""
-        if Settings.useGlass, let button = item.button {
-            let key = ObjectIdentifier(item)
-            let view = glassViews[key] ?? GlassBarsView()
-            if glassViews[key] == nil {
-                glassViews[key] = view
-                button.addSubview(view)
-            }
-            view.isHidden = false
-            view.update(rows: rows)
-            button.image = nil
-            item.length = view.contentWidth
-            view.setFrameOrigin(NSPoint(x: 0, y: (button.bounds.height - 22) / 2))
-            return
+        guard let button = item.button else { return }
+        button.title = ""
+        button.image = nil
+        let key = ObjectIdentifier(item)
+        let view = glassViews[key] ?? GlassBarsView()
+        if glassViews[key] == nil {
+            glassViews[key] = view
+            button.addSubview(view)
         }
-        hideGlass(item)
-        let image: NSImage
-        if rows.count == 1, let r = rows.first {
-            image = BarRenderer.image(text: r.text, percent: r.percent, colors: r.colors, prefix: r.prefix)
-        } else {
-            let t = (rows[0].text, rows[0].percent, rows[0].colors, rows[0].prefix)
-            let b = (rows[1].text, rows[1].percent, rows[1].colors, rows[1].prefix)
-            image = BarRenderer.stacked(top: t, bottom: b)
-        }
-        image.isTemplate = false
-        item.button?.image = image
+        view.isHidden = false
+        view.update(rows: rows)
+        item.length = view.contentWidth
+        view.setFrameOrigin(NSPoint(x: 0, y: (button.bounds.height - 22) / 2))
     }
 
     private func hideGlass(_ item: NSStatusItem) {

@@ -7,7 +7,7 @@ struct BarRow {
     var prefix: String
 }
 
-/// Experimental: draws the bars as live Liquid Glass views (macOS 26+) instead of a flat image.
+/// Draws the bars as live Liquid Glass views (macOS 26+).
 final class GlassBarsView: NSView {
     static let saturationBoost: CGFloat = 1.5
     static let contentOpacity: CGFloat = 0.6

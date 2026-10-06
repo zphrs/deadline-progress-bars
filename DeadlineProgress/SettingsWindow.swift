@@ -9,7 +9,6 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
     private let labelsCheckbox = NSButton(checkboxWithTitle: "Show Due/Day labels beside the bars", target: nil, action: nil)
     private let dailyTopCheckbox = NSButton(checkboxWithTitle: "When stacked, show the daily bar on top", target: nil, action: nil)
     /// Called after every change; `dataChanged` is true when the token, database or page changed.
-    private let glassCheckbox = NSButton(checkboxWithTitle: "Experimental: Liquid Glass bars", target: nil, action: nil)
     private let onChange: (_ dataChanged: Bool) -> Void
     private var debounce: Timer?
     private var colorsDebounce: Timer?
@@ -44,7 +43,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         pageField.placeholderString = "https://app.notion.com/p/…"
         formatField.placeholderString = BarRenderer.defaultFormat
         for field in [tokenField, dataSourceField, pageField, formatField] { field.delegate = self }
-        for box in [stackCheckbox, labelsCheckbox, dailyTopCheckbox, glassCheckbox] {
+        for box in [stackCheckbox, labelsCheckbox, dailyTopCheckbox] {
             box.target = self
             box.action = #selector(applyNow)
         }
@@ -62,7 +61,6 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
             [NSView(), labelsCheckbox],
             [NSView(), stackCheckbox],
             [NSView(), dailyTopCheckbox],
-            [NSView(), glassCheckbox],
         ])
         grid.column(at: 0).xPlacement = .trailing
         grid.column(at: 1).width = 280
@@ -430,7 +428,6 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         formatField.stringValue = Settings.labelFormat
         labelsCheckbox.state = Settings.showLabels ? .on : .off
         dailyTopCheckbox.state = Settings.dailyOnTop ? .on : .off
-        glassCheckbox.state = Settings.useGlass ? .on : .off
         stackCheckbox.state = Settings.stackBars ? .on : .off
         editing = editingDaily ? Settings.dailyColors : Settings.deadlineColors
         rebuildRows()
@@ -468,7 +465,6 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         Settings.labelFormat = formatField.stringValue
         Settings.showLabels = labelsCheckbox.state == .on
         Settings.dailyOnTop = dailyTopCheckbox.state == .on
-        Settings.useGlass = glassCheckbox.state == .on
         Settings.stackBars = stackCheckbox.state == .on
         onChange(before != [Settings.token ?? "", Settings.dataSourceID, Settings.dailyPageID])
     }
