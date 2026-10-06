@@ -72,21 +72,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: Rendering
 
     private func render() {
+        // Decide stacking from settings alone and set visibility once, so the hidden
+        // Day item never flashes in the menu bar mid-render or while data loads.
+        let stacked = Settings.stackBars && Settings.showDeadline && Settings.showDaily
         deadlineItem.isVisible = Settings.showDeadline
-        dailyItem.isVisible = Settings.showDaily
+        dailyItem.isVisible = Settings.showDaily && !stacked
         guard Settings.token != nil else {
             setPlain(deadlineItem, "⏳ set token")
             setPlain(dailyItem, "⏳ set token")
             return
         }
         let warn = "⚠︎"
-        if Settings.stackBars, Settings.showDeadline, Settings.showDaily, let a = selectedDeadline, let b = daily {
+        if stacked {
+            guard let a = selectedDeadline else {
+                if Settings.dataSourceID.isEmpty {
+                    setPlain(deadlineItem, "⏳ set database")
+                } else {
+                    setPlain(deadlineItem, deadlineFailed ? "⏳ \(warn)" : (deadlineLoaded ? "⏳ none" : "⏳ …"))
+                }
+                return
+            }
+            guard let b = daily else {
+                if Settings.dailyPageID.isEmpty {
+                    setPlain(deadlineItem, "⏳ set workday")
+                } else {
+                    setPlain(deadlineItem, dailyFailed ? "⏳ \(warn)" : "⏳ …")
+                }
+                return
+            }
             let deadlineBar = (deadlineFailed ? "⚠︎" : "") + BarRenderer.label(timeLeft: a.timeLeft, percent: a.percent)
             let dailyBar = (dailyFailed ? "⚠︎" : "") + BarRenderer.label(timeLeft: b.timeLeft, percent: b.percent)
             let dl = BarRow(text: deadlineBar, percent: a.percent, colors: Settings.deadlineColors, prefix: deadlinePrefix)
             let wd = BarRow(text: dailyBar, percent: b.percent, colors: Settings.dailyColors, prefix: dailyPrefix)
             showBars(deadlineItem, rows: Settings.dailyOnTop ? [wd, dl] : [dl, wd])
-            dailyItem.isVisible = false
             return
         }
         if let d = selectedDeadline {
