@@ -1,5 +1,6 @@
 #!/bin/zsh
 # Builds a Release "Deadline Progress Bars.app" and packages it into build/DeadlineProgressBars.dmg
+# Any arguments are passed through to xcodebuild (e.g. MARKETING_VERSION=1.2.3 CODE_SIGN_IDENTITY=-)
 set -euo pipefail
 
 cd "${0:A:h}/.."
@@ -9,7 +10,7 @@ if command -v xcodegen >/dev/null; then
 fi
 
 xcodebuild -project DeadlineProgress.xcodeproj -scheme DeadlineProgress \
-  -configuration Release -derivedDataPath build clean build
+  -configuration Release -derivedDataPath build "$@" clean build
 
 rm -rf build/dmg build/DeadlineProgressBars.dmg
 mkdir -p build/dmg

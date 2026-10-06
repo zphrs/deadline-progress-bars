@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.0.0). Created from the selected ref if it doesn't exist."
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      DMG: build/DeadlineProgressBars.dmg
+      APP: build/Build/Products/Release/Deadline Progress Bars.app
+      BUNDLE_ID: dev.zphrs.DeadlineProgress
+      # Every release must be signed by this team. The app's keychain items and sandbox
+      # container are bound to its designated requirement (bundle ID + team ID), so a
+      # release signed any other way would lose access to the saved Notion token.
+      TEAM_ID: 7DAR7MF3X3
+    steps:
+      - name: Check signing secrets
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          missing=()
+          for name in MACOS_CERTIFICATE MACOS_CERTIFICATE_PASSWORD APPLE_ID APPLE_APP_PASSWORD; do
+            [[ -n "${(P)name}" ]] || missing+=("$name")
+          done
+          if (( ${#missing} )); then
+            echo "::error::Missing repository secrets: ${missing[*]}. Releases must be Developer ID signed."
+            exit 1
+          fi
+        shell: zsh {0}
+
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Import Developer ID certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+
+          IDENTITY="Developer ID Application"
+          if ! security find-identity -v -p codesigning "$KEYCHAIN" | grep -q "$IDENTITY: .*($TEAM_ID)"; then
+            echo "::error::Certificate is not a Developer ID Application identity for team $TEAM_ID."
+            security find-identity -v -p codesigning "$KEYCHAIN"
+            exit 1
+          fi
+
+      - name: Build DMG
+        run: |
+          scripts/make-dmg.sh MARKETING_VERSION="${TAG#v}" CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            CODE_SIGN_IDENTITY="Developer ID Application" DEVELOPMENT_TEAM="$TEAM_ID" \
+            OTHER_CODE_SIGN_FLAGS="--timestamp"
+          codesign --sign "Developer ID Application" --timestamp "$DMG"
+
+      - name: Verify app signature
+        run: |
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          REQ="$(codesign -d -r- "$APP" 2>&1)"
+          echo "$REQ"
+          # The designated requirement is what keychain ACLs and the sandbox container check.
+          # It must pin the bundle ID and team, not a specific certificate or cdhash.
+          grep -q "identifier \"$BUNDLE_ID\"" <<<"$REQ" || { echo "::error::Unexpected bundle identifier"; exit 1; }
+          grep -q "certificate leaf\[subject.OU\] = \"\{0,1\}$TEAM_ID" <<<"$REQ" || { echo "::error::Designated requirement is not pinned to team $TEAM_ID"; exit 1; }
+          codesign -d --entitlements - --xml "$APP" | grep -q "com.apple.security.app-sandbox" \
+            || { echo "::error::Sandbox entitlement missing"; exit 1; }
+
+      - name: Notarize DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          xcrun notarytool submit "$DMG" --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" --team-id "$TEAM_ID" --wait
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+
+      - name: Rename DMG with version
+        run: |
+          OUT="build/DeadlineProgressBars-${TAG#v}.dmg"
+          mv "$DMG" "$OUT"
+          echo "DMG=$OUT" >> "$GITHUB_ENV"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Download the DMG, open it, and drag **Deadline Progress Bars** into Applications."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$DMG" --clobber
+          else
+            gh release create "$TAG" "$DMG" --title "$TAG" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
