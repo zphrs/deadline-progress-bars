@@ -12,7 +12,7 @@ A way to mitigate time-blindness with countdowns to deadlines. Each deadline get
 
 Duplicate the Notion template to set up your own tracker:
 
-[notion.com/<FILL_IN>](https://notion.com/<FILL_IN>)
+[deadline-progress-bars.notion.site](https://deadline-progress-bars.notion.site/)
 
 ## License
 
