@@ -183,6 +183,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 menu.addItem(item)
             }
             menu.addItem(.separator())
+            // A nil action greys the item out under the menu's default auto-enabling.
+            let open = NSMenuItem(title: "Open in Notion",
+                                  action: selectedDeadline == nil ? nil : #selector(openInNotion), keyEquivalent: "o")
+            open.target = self
+            menu.addItem(open)
+            menu.addItem(.separator())
         }
         addCommonItems(to: menu)
     }
@@ -206,6 +212,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func pick(_ sender: NSMenuItem) {
         Settings.selectedDeadlineID = sender.representedObject as? String
         render()
+    }
+
+    @objc private func openInNotion() {
+        guard let id = selectedDeadline?.id,
+              let url = URL(string: "https://app.notion.com/p/" + id.replacingOccurrences(of: "-", with: "")) else { return }
+        NSWorkspace.shared.open(url)
     }
 
     @objc private func openSettings() {
