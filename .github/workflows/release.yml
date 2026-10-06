@@ -110,7 +110,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES=$(cat <<'EOF'
+          # Heredoc into a file, not $(...): macOS bash 3.2 misparses quotes inside heredocs in command substitutions.
+          NOTES="$RUNNER_TEMP/notes.md"
+          cat > "$NOTES" <<'EOF'
           Download the DMG, open it, and drag **Deadline Progress Bars** into Applications.
 
           This app isn't notarized by Apple, so macOS blocks it the first time you open it. To allow it:
@@ -123,11 +125,10 @@ jobs:
           xattr -dr com.apple.quarantine "/Applications/Deadline Progress Bars.app"
           ```
           EOF
-          )
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$DMG" --clobber
           else
-            gh release create "$TAG" "$DMG" --title "$TAG" --notes "$NOTES" --target "$GITHUB_SHA"
+            gh release create "$TAG" "$DMG" --title "$TAG" --notes-file "$NOTES" --target "$GITHUB_SHA"
           fi
 
       - name: Clean up keychain
