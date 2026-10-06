@@ -1,0 +1,140 @@
+{
+  "features" : [
+    "refractivity",
+    "specular-location"
+  ],
+  "fill" : "automatic",
+  "groups" : [
+    {
+      "blur-material" : null,
+      "hidden" : false,
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : {
+                "solid" : "srgb:0.13725,0.51373,0.88627,1.00000"
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "srgb:0.13725,0.51373,0.88627,1.00000"
+              }
+            }
+          ],
+          "glass" : true,
+          "image-name" : "icon-fill-top.svg",
+          "name" : "icon-fill-top",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "blend-mode-specializations" : [
+            {
+              "value" : "overlay"
+            },
+            {
+              "appearance" : "dark",
+              "value" : "normal"
+            }
+          ],
+          "fill-specializations" : [
+            {
+              "value" : {
+                "solid" : "srgb:0.85098,0.45098,0.05098,1.00000"
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+              }
+            }
+          ],
+          "glass" : true,
+          "image-name" : "icon-fill-bottom.svg",
+          "name" : "icon-fill-bottom",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "lighting" : "individual",
+      "refractivity" : {
+        "depth" : 0,
+        "enabled" : true,
+        "strength" : 0
+      },
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 1.2
+      },
+      "specular" : "inside",
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.25
+      }
+    },
+    {
+      "blur-material" : null,
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "value" : {
+                "solid" : "srgb:0.47059,0.46667,0.45490,0.20000"
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "srgb:0.47059,0.46667,0.45490,0.20000"
+              }
+            }
+          ],
+          "image-name" : "icon-track.svg",
+          "name" : "icon-track",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "lighting" : "individual",
+      "name" : "Group",
+      "refractivity" : {
+        "depth" : 0.5,
+        "enabled" : true,
+        "strength" : 0
+      },
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.6
+      },
+      "specular" : "outside",
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.2
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
