@@ -14,17 +14,28 @@ final class GlassBarsView: NSView {
 
     private(set) var contentWidth: CGFloat = 0
     private var rows: [BarRow] = []
+    private var backdrop: NSColor?
+    private var appearanceCheckPending = false
 
     override func hitTest(_ point: NSPoint) -> NSView? { nil }  // let the status button take clicks
 
     // The fill-text color is computed once per build, so rebuild when the menu bar tint flips.
+    // Replicant snapshots swap the appearance and back in one pass, so compare once they're done
+    // and only rebuild when the menu bar's tint really changed.
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
-        update(rows: rows)
+        guard !appearanceCheckPending else { return }
+        appearanceCheckPending = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            appearanceCheckPending = false
+            if NSAppearance.menuBarBackdrop(for: effectiveAppearance) != backdrop { update(rows: rows) }
+        }
     }
 
     func update(rows: [BarRow]) {
         self.rows = rows
+        backdrop = NSAppearance.menuBarBackdrop(for: effectiveAppearance)
         subviews.forEach { $0.removeFromSuperview() }
         let stacked = rows.count > 1
         let style = stacked ? BarRenderer.Style(fontSize: 10, barHeight: 10, canvasHeight: 11) : BarRenderer.Style()
@@ -42,12 +53,8 @@ final class GlassBarsView: NSView {
         }
     }
 
-    private func label(_ text: String, font: NSFont, color: NSColor) -> NSTextField {
-        let field = NSTextField(labelWithString: text)
-        field.font = font
-        field.textColor = color
-        field.sizeToFit()
-        return field
+    private func label(_ text: String, font: NSFont, color: NSColor) -> NSView {
+        TextLabel(text: text, font: font, color: color)
     }
 
     private func addRow(_ row: BarRow, y: CGFloat, style: BarRenderer.Style, font: NSFont,
@@ -109,5 +116,26 @@ final class GlassBarsView: NSView {
         }
         clipped(tint.contrastingText(over: NSAppearance.menuBarBackdrop(for: effectiveAppearance)), x: 0, width: max(h, split))
         clipped(.labelColor, x: max(h, split), width: barWidth - max(h, split))
+    }
+}
+
+/// Plain drawn text. NSTextField redirties itself in updateLayer, which makes status-item replicant
+/// snapshots reschedule each other forever, so the bars draw their text directly.
+private final class TextLabel: NSView {
+    private let string: NSAttributedString
+    private static let padding: CGFloat = 2  // matches NSTextField label insets
+
+    init(text: String, font: NSFont, color: NSColor) {
+        string = NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: color])
+        let size = string.size()
+        super.init(frame: NSRect(x: 0, y: 0, width: ceil(size.width) + 2 * Self.padding, height: ceil(size.height)))
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draw(_ dirtyRect: NSRect) {
+        string.draw(at: NSPoint(x: Self.padding, y: 0))
     }
 }
