@@ -44,7 +44,7 @@ final class SettingsWindowController: NSWindowController, NSTextFieldDelegate, N
         super.init(window: window)
         window.delegate = self
 
-        tokenField.placeholderString = "Integration token (stored in Keychain)"
+        tokenField.placeholderString = "Personal access token (stored in Keychain)"
         dataSourceField.placeholderString = "https://app.notion.com/p/…"
         pageField.placeholderString = "https://app.notion.com/p/…"
         formatField.placeholderString = BarRenderer.defaultFormat
