@@ -16,7 +16,7 @@ A way to mitigate time-blindness with countdowns to deadlines. Each deadline get
 
 Duplicate the Notion template to set up your own tracker, and follow the instructions under the "MacOS topbar setup instructions" dropdown:
 
-[deadline-progress-bars.notion.site](https://deadline-progress-bars.notion.site/)
+[deadline-progress-bars.notion.site/Deadline-Progress-Bars-Template-3f06ffa0d35e802bb9dcf794ebfc044c](https://deadline-progress-bars.notion.site/Deadline-Progress-Bars-Template-3f06ffa0d35e802bb9dcf794ebfc044c)
 
 ## License
 
