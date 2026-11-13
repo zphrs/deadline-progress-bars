@@ -137,7 +137,17 @@ enum Settings {
     /// A data source ID, or a database ID / pasted database URL that `Notion` resolves to all of its data sources.
     static var dataSourceID: String {
         get { UserDefaults.standard.string(forKey: "dataSourceID") ?? "" }
-        set { UserDefaults.standard.set(notionID(from: newValue), forKey: "dataSourceID") }
+        set {
+            UserDefaults.standard.set(notionID(from: newValue), forKey: "dataSourceID")
+            if let host = URL(string: newValue.trimmingCharacters(in: .whitespacesAndNewlines))?.host {
+                UserDefaults.standard.set(host, forKey: "notionHost")
+            }
+        }
+    }
+
+    /// Host of the last pasted database URL (e.g. `www.notion.so`), so links open on the same domain.
+    static var notionHost: String {
+        UserDefaults.standard.string(forKey: "notionHost") ?? "app.notion.com"
     }
 
     static var dailyPageID: String {

@@ -234,7 +234,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func openInNotion() {
         guard let id = selectedDeadline?.id,
-              let url = URL(string: "https://app.notion.com/p/" + id.replacingOccurrences(of: "-", with: "")) else { return }
+              let url = URL(string: "https://\(Settings.notionHost)/p/" + id.replacingOccurrences(of: "-", with: "")) else { return }
         NSWorkspace.shared.open(url)
     }
 
